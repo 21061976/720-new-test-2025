@@ -175,7 +175,7 @@ transform: translateX(0);
 position: sticky;
 top: 0;
 background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
-z-index: 1000;
+z-index: 100;
 box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
@@ -818,8 +818,8 @@ scroll-behavior: smooth;
 </head>
 <body>
 <div class="container">
-<button class="edit-toggle" onclick="toggleEdit()">🎨 התחל עריכה</button>
-<button class="pdf-export" onclick="exportToPDF()">📄 ייצוא ל-PDF</button>
+<button class="edit-toggle">🎨 התחל עריכה</button>
+<button class="pdf-export">📄 ייצוא ל-PDF</button>
 
 <div class="success-message" id="successMessage">✅ מצב עריכה הופעל!</div>
 
@@ -1327,3 +1327,193 @@ scroll-behavior: smooth;
 <p class="editable"><strong>פיתוח ועיצוב מוצר:</strong> ד"ר אסף אוזן</p>
 </div>
 </footer>
+</div>
+
+<button class="back-to-top">⬆️</button>
+
+<script>
+// Toggle Edit Mode
+function toggleEdit() {
+    const editableElements = document.querySelectorAll('.editable');
+    const editToggleButton = document.querySelector('.edit-toggle');
+    const successMessage = document.getElementById('successMessage');
+    
+    const isEditing = editToggleButton.classList.contains('active');
+    
+    if (!isEditing) {
+        // Enable editing
+        editableElements.forEach(el => {
+            el.contentEditable = true;
+            el.setAttribute('contenteditable', 'true');
+        });
+        editToggleButton.textContent = '💾 סיים עריכה';
+        editToggleButton.classList.add('active');
+        showMessage('✅ מצב עריכה הופעל!');
+    } else {
+        // Disable editing
+        editableElements.forEach(el => {
+            el.contentEditable = false;
+            el.removeAttribute('contenteditable');
+        });
+        editToggleButton.textContent = '🎨 התחל עריכה';
+        editToggleButton.classList.remove('active');
+        showMessage('✅ השינויים נשמרו!');
+    }
+}
+
+// Show success message
+function showMessage(msg) {
+    const successMessage = document.getElementById('successMessage');
+    successMessage.textContent = msg;
+    successMessage.classList.add('show');
+    setTimeout(() => {
+        successMessage.classList.remove('show');
+    }, 3000);
+}
+
+// Export to PDF functionality
+function exportToPDF() {
+    const button = document.querySelector('.pdf-export');
+    
+    if (button.classList.contains('exporting')) return;
+    
+    button.classList.add('exporting');
+    button.textContent = '⏳ מייצא...';
+    
+    // Check if editing is active and disable it first
+    const editToggleButton = document.querySelector('.edit-toggle');
+    const wasEditing = editToggleButton.classList.contains('active');
+    if (wasEditing) {
+        toggleEdit();
+    }
+    
+    // Hide interactive elements
+    const elementsToHide = ['.edit-toggle', '.pdf-export', '.success-message', '.back-to-top'];
+    elementsToHide.forEach(selector => {
+        const el = document.querySelector(selector);
+        if (el) el.style.display = 'none';
+    });
+    
+    // Add print styles
+    const printCSS = `
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .edit-toggle, .pdf-export, .success-message, .back-to-top {
+                display: none !important;
+            }
+            .container {
+                max-width: none !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+            .section, .summary-box, .risk-card {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .nav-menu {
+                position: static !important;
+            }
+            .editable[contenteditable="true"] {
+                background: transparent !important;
+                border: none !important;
+                padding: 3px !important;
+            }
+        }
+    `;
+    
+    const style = document.createElement('style');
+    style.textContent = printCSS;
+    document.head.appendChild(style);
+    
+    // Trigger print after a delay
+    setTimeout(() => {
+        window.print();
+        
+        // Restore everything after print
+        setTimeout(() => {
+            document.head.removeChild(style);
+            
+            elementsToHide.forEach(selector => {
+                const el = document.querySelector(selector);
+                if (el) el.style.display = '';
+            });
+            
+            if (wasEditing) {
+                toggleEdit();
+            }
+            
+            button.classList.remove('exporting');
+            button.textContent = '📄 ייצוא ל-PDF';
+            
+            showMessage('✅ ההדפסה הושלמה! בחר "שמור כ-PDF" בדפדפן');
+        }, 1000);
+    }, 500);
+}
+
+// Scroll to top functionality
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
+// Back to top button visibility
+window.addEventListener('scroll', () => {
+    const backToTopButton = document.querySelector('.back-to-top');
+    if (window.scrollY > 200) {
+        backToTopButton.classList.add('visible');
+    } else {
+        backToTopButton.classList.remove('visible');
+    }
+});
+
+// Navigation active state
+window.addEventListener('scroll', () => {
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav-link');
+    
+    let current = '';
+    sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.clientHeight;
+        if (pageYOffset >= sectionTop - 100) {
+            current = section.getAttribute('id');
+        }
+    });
+    
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href').includes(current)) {
+            link.classList.add('active');
+        }
+    });
+});
+
+// Add event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    // Edit button
+    const editButton = document.querySelector('.edit-toggle');
+    if (editButton) {
+        editButton.addEventListener('click', toggleEdit);
+    }
+    
+    // PDF button
+    const pdfButton = document.querySelector('.pdf-export');
+    if (pdfButton) {
+        pdfButton.addEventListener('click', exportToPDF);
+    }
+    
+    // Back to top button
+    const backButton = document.querySelector('.back-to-top');
+    if (backButton) {
+        backButton.addEventListener('click', scrollToTop);
+    }
+});
+</script>
+</body>
+</html>
